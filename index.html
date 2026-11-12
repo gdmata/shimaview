@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0b0f17" />
+  <meta name="description" content="Planejador Arquitetônico 3D interativo para restaurante japonês de sushi (2,93m fundo → 2,53m entrada × 6,85m comprimento). Personalize paredes, balcão em L, mesas e cozinha em tempo real." />
+  <title>Planejador de Espaço 3D — Restaurante Japonês de Sushi</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍣</text></svg>" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js" async></script>
+  <style>
+    :root {
+      --background: #0b0f17;
+      --foreground: #f8fafc;
+      --card: #111827;
+      --border: #334155;
+      --muted-foreground: #94a3b8;
+    }
+    * { -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--background); color: var(--foreground); }
+    .btn-hi {
+      display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+      padding: 8px 13px; min-height: 38px; border-radius: 9px;
+      font-size: 12.5px; font-weight: 700; line-height: 1.1;
+      cursor: pointer; transition: all 0.14s ease; white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      text-decoration: none;
+    }
+    .btn-hi:active { transform: scale(0.96); }
+    .btn-hi-dining { background: #065f46; border: 1.5px solid #34d399; color: #ecfdf5; }
+    .btn-hi-dining:hover { background: #047857; border-color: #6ee7b7; }
+    .btn-hi-amber { background: #b45309; border: 1.5px solid #fbbf24; color: #fffbeb; }
+    .btn-hi-amber:hover { background: #d97706; }
+    .btn-hi-kitchen { background: #0c4a6e; border: 1.5px solid #38bdf8; color: #f0f9ff; }
+    .btn-hi-kitchen:hover { background: #075985; border-color: #7dd3fc; }
+    .btn-hi-struct { background: #581c87; border: 1.5px solid #c084fc; color: #faf5ff; }
+    .btn-hi-struct:hover { background: #6b21a8; }
+    .btn-hi-red { background: #991b1b; border: 1.5px solid #f87171; color: #fef2f2; }
+    .btn-hi-red:hover { background: #b91c1c; }
+    .btn-hi-slate { background: #1e293b; border: 1.5px solid #64748b; color: #f8fafc; }
+    .btn-hi-slate:hover { background: #334155; border-color: #fbbf24; }
+    input[type="range"] { height: 8px; border-radius: 6px; }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-2 sm:p-4 select-none">
+  <div class="max-w-7xl mx-auto flex flex-col gap-3">
+    <!-- Top Header & Space Summary -->
+    <div class="bg-[var(--card)] border-2 border-slate-700 rounded-xl p-3.5 shadow-lg flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="px-2.5 py-0.5 rounded-md bg-amber-500 text-slate-950 text-xs font-extrabold uppercase">
+            Modo Espaço Limpo
+          </span>
+          <span id="header-metrics" class="text-xs font-semibold text-amber-300 font-mono">
+            Fundo 2.93m → Entrada 2.53m × 6.85m (18.70 m²) • 0 Itens Adicionados
+          </span>
+        </div>
+        <h1 class="text-base md:text-lg font-extrabold text-[var(--foreground)] mt-1">
+          🍣 Planejador Arquitetônico 3D — Monte e Personalize seu Layout
+        </h1>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <a href="./compact.html" class="btn-hi btn-hi-kitchen" title="Alternar para o modo enxuto otimizado para telas pequenas">
+          📱 Modo Compacto (Celular)
+        </a>
+        <button id="btn-toggle-kitchen-wall" class="btn-hi btn-hi-amber">
+          🧱 Parede da Cozinha: LIGADA
+        </button>
+        <button id="btn-load-preset" class="btn-hi btn-hi-dining">
+          📦 Carregar Móveis Modelo
+        </button>
+        <button id="btn-clear-all" class="btn-hi btn-hi-red">
+          🗑️ Limpar Móveis
+        </button>
+        <button id="btn-reset-walls" class="btn-hi btn-hi-slate">
+          ↺ Restaurar Paredes
+        </button>
+      </div>
+    </div>
+
+    <!-- Furniture & Equipment Catalog Bar (Click to Add to Clean Space) -->
+    <div class="bg-[var(--card)] border-2 border-slate-700 rounded-xl p-3 shadow-lg flex flex-col gap-2.5">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <span class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-amber-400">
+          + Toque em Qualquer Item Abaixo para Adicionar à Planta (Depois Arraste em 3D)
+        </span>
+        <span class="text-xs font-medium text-slate-300">
+          Verde = Salão • Azul = Cozinha • Roxo = Paredes/Blocos
+        </span>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Dining & Service -->
+        <button data-add="table2" class="btn-hi btn-hi-dining">
+          + Mesa 2 Lug. (60×60cm)
+        </button>
+        <button data-add="table4" class="btn-hi btn-hi-dining">
+          + Mesa 4 Lug. (120×60cm)
+        </button>
+        <button data-add="counter" class="btn-hi btn-hi-amber">
+          + Balcão / Caixa (180×50cm)
+        </button>
+        <button data-add="l_counter" class="btn-hi btn-hi-amber">
+          + Balcão em L (160×140cm)
+        </button>
+        <button data-add="sushibar" class="btn-hi btn-hi-amber">
+          + Balcão Sushi Bar (200×45cm)
+        </button>
+        <button data-add="stool" class="btn-hi btn-hi-amber">
+          + Banqueta (40×40cm)
+        </button>
+        <button data-add="display_freezer" class="btn-hi btn-hi-kitchen">
+          + Expositor (50×60cm)
+        </button>
+
+        <!-- Kitchen Equipment -->
+        <button data-add="prep" class="btn-hi btn-hi-kitchen">
+          + Bancada Inox (40×100cm)
+        </button>
+        <button data-add="sink" class="btn-hi btn-hi-kitchen">
+          + Pia Inox (60×100cm)
+        </button>
+        <button data-add="fryer" class="btn-hi btn-hi-kitchen">
+          + Fritadeira (65×58cm)
+        </button>
+        <button data-add="stove" class="btn-hi btn-hi-kitchen">
+          + Fogão (68×96cm)
+        </button>
+        <button data-add="hood" class="btn-hi btn-hi-kitchen">
+          + Coifa Industrial (76×170cm)
+        </button>
+        <button data-add="comm_freezer" class="btn-hi btn-hi-kitchen">
+          + Freezer (65×75cm)
+        </button>
+        <button data-add="fridge" class="btn-hi btn-hi-kitchen">
+          + Geladeira (58×78cm)
+        </button>
+        <button data-add="wall" class="btn-hi btn-hi-struct">
+          + Parede Divisória (100×8cm)
+        </button>
+        <button data-add="box" class="btn-hi btn-hi-struct">
+          + Bloco Livre
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Workspace Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+      <!-- Left/Center: 3D Interactive Viewport (8 cols) -->
+      <div class="lg:col-span-8 bg-[var(--card)] border-2 border-slate-700 rounded-xl overflow-hidden shadow-lg flex flex-col">
+        <!-- Camera & Display Controls Bar -->
+        <div class="px-3 py-2.5 border-b border-slate-700 flex flex-wrap items-center justify-between gap-2 bg-slate-950">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button data-view="iso" class="view-btn btn-hi btn-hi-amber !min-h-[34px] !px-3 !py-1.5">
+              🧊 3D Isométrico
+            </button>
+            <button data-view="top" class="view-btn btn-hi btn-hi-slate !min-h-[34px] !px-3 !py-1.5">
+              📐 Planta 2D
+            </button>
+            <button data-view="front" class="view-btn btn-hi btn-hi-slate !min-h-[34px] !px-3 !py-1.5">
+              🚪 Entrada
+            </button>
+            <button data-view="kitchen" class="view-btn btn-hi btn-hi-slate !min-h-[34px] !px-3 !py-1.5">
+              🍳 Cozinha
+            </button>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button id="btn-toggle-grid" class="btn-hi btn-hi-dining !min-h-[34px] !px-2.5 !py-1">
+              Grade 50cm: LIG
+            </button>
+            <button id="btn-toggle-rulers" class="btn-hi btn-hi-kitchen !min-h-[34px] !px-2.5 !py-1">
+              Cotas: LIG
+            </button>
+            <button id="btn-toggle-handles" class="btn-hi btn-hi-amber !min-h-[34px] !px-2.5 !py-1">
+              Alças: LIG
+            </button>
+            <button id="btn-zoom-in" class="btn-hi btn-hi-slate !min-h-[34px] !px-3 !py-1 !text-base">＋</button>
+            <button id="btn-zoom-out" class="btn-hi btn-hi-slate !min-h-[34px] !px-3 !py-1 !text-base">－</button>
+          </div>
+        </div>
+
+        <!-- Interactive 3D Canvas Stage -->
+        <div class="relative w-full h-[420px] sm:h-[540px] bg-[#11141a] overflow-hidden">
+          <canvas id="cad-canvas" class="w-full h-full block cursor-grab active:cursor-grabbing" style="touch-action: none;"></canvas>
+
+          <!-- On-Canvas Helper & Live Clearance Readout -->
+          <div class="pointer-events-none absolute bottom-3 left-3 right-3 flex flex-wrap items-center justify-between gap-2">
+            <div class="bg-slate-950/90 border border-slate-600 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs text-slate-100 flex flex-wrap items-center gap-3 shadow">
+              <span><strong class="text-amber-400">Arraste Pontos:</strong> Paredes</span>
+              <span><strong class="text-emerald-400">Arraste Itens:</strong> Mover</span>
+              <span><strong class="text-sky-400">Pinça (2 dedos):</strong> Zoom</span>
+            </div>
+            <div id="clearance-badge" class="bg-slate-950/95 border-2 border-sky-400/60 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-mono font-bold text-sky-200 shadow">
+              Espaço Limpo Pronto — Toque em "+ Item" acima para adicionar móveis
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Sidebar: Selected Item Customizer + Structural Wall Controls (4 cols) -->
+      <div class="lg:col-span-4 flex flex-col gap-3.5">
+        <!-- Panel 1: Deep Customizer for Selected Item -->
+        <div class="bg-[var(--card)] border-2 border-slate-700 rounded-xl p-3.5 shadow-lg flex flex-col gap-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-1.5">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-400">
+              Item Selecionado
+            </span>
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button id="btn-flip-l" class="btn-hi btn-hi-amber !min-h-[32px] !px-2.5 !py-1" style="display:none;">
+                ⇄ Inverter L
+              </button>
+              <button id="btn-rot-45" class="btn-hi btn-hi-slate !min-h-[32px] !px-2.5 !py-1">
+                ↻ +45°
+              </button>
+              <button id="btn-rot-90" class="btn-hi btn-hi-slate !min-h-[32px] !px-2.5 !py-1">
+                ↻ +90°
+              </button>
+              <button id="btn-dup-item" class="btn-hi btn-hi-dining !min-h-[32px] !px-2.5 !py-1">
+                📋 Duplicar
+              </button>
+              <button id="btn-del-item" class="btn-hi btn-hi-red !min-h-[32px] !px-2.5 !py-1">
+                🗑️ Excluir
+              </button>
+            </div>
+          </div>
+
+          <!-- Editable Label Input -->
+          <div class="flex items-center gap-2">
+            <input
+              id="inp-item-name"
+              type="text"
+              placeholder="Selecione ou adicione um item..."
+              class="w-full px-2.5 py-1 rounded-lg bg-[var(--background)] border border-[var(--border)] text-xs font-semibold text-[var(--foreground)] focus:outline-none focus:border-amber-500"
+            />
+          </div>
+
+          <!-- Color / Material Finish Swatches -->
+          <div class="flex items-center justify-between gap-1 pt-0.5">
+            <span class="text-xs text-[var(--muted-foreground)]">Acabamento:</span>
+            <div class="flex items-center gap-1.5">
+              <button data-color="#d9b584" title="Madeira Clara Hinoki" class="color-swatch w-5 h-5 rounded-full border border-white/30" style="background:#d9b584"></button>
+              <button data-color="#8c6239" title="Madeira Nogueira Escura" class="color-swatch w-5 h-5 rounded-full border border-white/30" style="background:#8c6239"></button>
+              <button data-color="#cbd5e1" title="Aço Inox Escovado" class="color-swatch w-5 h-5 rounded-full border border-white/30" style="background:#cbd5e1"></button>
+              <button data-color="#222730" title="Preto Carvão Fosco" class="color-swatch w-5 h-5 rounded-full border border-white/30" style="background:#222730"></button>
+              <button data-color="#38bdf8" title="Vidro / Azul Gelo" class="color-swatch w-5 h-5 rounded-full border border-white/30" style="background:#38bdf8"></button>
+              <button data-color="#34d399" title="Verde Esmeralda" class="color-swatch w-5 h-5 rounded-full border border-white/30" style="background:#34d399"></button>
+              <button data-color="#f97352" title="Terracota / Salmão" class="color-swatch w-5 h-5 rounded-full border border-white/30" style="background:#f97352"></button>
+              <button data-color="#f8fafc" title="Branco Cerâmico" class="color-swatch w-5 h-5 rounded-full border border-white/30" style="background:#f8fafc"></button>
+            </div>
+          </div>
+
+          <!-- Exact Width, Length, Height, Elevation (Sliders + CM Readout) -->
+          <div class="grid grid-cols-2 gap-2 pt-1 border-t border-[var(--border)]">
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between text-xs">
+                <span id="lbl-itemW" class="text-[var(--muted-foreground)]">Largura (X)</span>
+                <span id="val-itemW" class="font-mono text-xs text-emerald-400">60cm</span>
+              </div>
+              <input id="inp-itemW" type="range" min="0.08" max="2.90" step="0.02" value="0.60" class="w-full accent-emerald-500 cursor-pointer" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between text-xs">
+                <span id="lbl-itemD" class="text-[var(--muted-foreground)]">Comprimento (Z)</span>
+                <span id="val-itemD" class="font-mono text-xs text-emerald-400">60cm</span>
+              </div>
+              <input id="inp-itemD" type="range" min="0.08" max="4.00" step="0.02" value="0.60" class="w-full accent-emerald-500 cursor-pointer" />
+            </div>
+          </div>
+
+          <!-- L-Counter Arm Depth Control -->
+          <div id="l-counter-controls" class="hidden flex-col gap-1 bg-amber-950/30 border border-amber-500/40 rounded-lg p-2">
+            <div class="flex justify-between text-xs">
+              <span class="text-amber-200 font-semibold">Profundidade da Bancada L</span>
+              <span id="val-itemArmW" class="font-mono text-xs text-amber-300 font-bold">50cm</span>
+            </div>
+            <input id="inp-itemArmW" type="range" min="0.25" max="1.20" step="0.02" value="0.50" class="w-full accent-amber-500 cursor-pointer" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between text-xs">
+                <span class="text-[var(--muted-foreground)]">Altura (Y)</span>
+                <span id="val-itemH" class="font-mono text-xs text-[var(--foreground)]">75cm</span>
+              </div>
+              <input id="inp-itemH" type="range" min="0.15" max="2.40" step="0.05" value="0.75" class="w-full accent-emerald-500 cursor-pointer" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between text-xs">
+                <span class="text-[var(--muted-foreground)]">Elevação Piso</span>
+                <span id="val-itemElev" class="font-mono text-xs text-[var(--foreground)]">0cm</span>
+              </div>
+              <input id="inp-itemElev" type="range" min="0.00" max="1.85" step="0.05" value="0.00" class="w-full accent-emerald-500 cursor-pointer" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between text-xs">
+                <span class="text-[var(--muted-foreground)]">Pos X (Esq→Dir)</span>
+                <span id="val-itemX" class="font-mono text-xs text-[var(--foreground)]">1.50m</span>
+              </div>
+              <input id="inp-itemX" type="range" min="0.05" max="4.40" step="0.02" value="1.50" class="w-full accent-emerald-500 cursor-pointer" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between text-xs">
+                <span class="text-[var(--muted-foreground)]">Pos Z (Fundo→Frente)</span>
+                <span id="val-itemZ" class="font-mono text-xs text-[var(--foreground)]">3.00m</span>
+              </div>
+              <input id="inp-itemZ" type="range" min="0.05" max="10.00" step="0.02" value="3.00" class="w-full accent-emerald-500 cursor-pointer" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel 2: Expand / Retract Building Walls & Structure -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 shadow-sm flex flex-col gap-2">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-[var(--foreground)] flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
+              Paredes Estruturais e Medidas
+            </h2>
+            <span class="text-xs text-[var(--muted-foreground)]">Arraste ou Deslize</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between text-xs">
+                <span class="text-[var(--muted-foreground)]">Larg. Entrada</span>
+                <span id="val-totalW" class="font-mono font-semibold text-amber-400">2.53m</span>
+              </div>
+              <input id="inp-totalW" type="range" min="1.80" max="4.80" step="0.01" value="2.53" class="w-full accent-amber-500 cursor-pointer" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between text-xs">
+                <span class="text-[var(--muted-foreground)]">Larg. Fundo</span>
+                <span id="val-backW" class="font-mono font-semibold text-amber-400">2.93m</span>
+              </div>
+              <input id="inp-backW" type="range" min="1.80" max="4.80" step="0.01" value="2.93" class="w-full accent-amber-500 cursor-pointer" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between text-xs">
+                <span class="text-[var(--muted-foreground)]">Comp. Total (Z)</span>
+                <span id="val-totalL" class="font-mono font-semibold text-amber-400">6.85m</span>
+              </div>
+              <input id="inp-totalL" type="range" min="4.00" max="11.00" step="0.05" value="6.85" class="w-full accent-amber-500 cursor-pointer" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between text-xs">
+                <span class="text-[var(--muted-foreground)]">Comp. Entrada (<span id="val-kitchenL">4.85m</span> Coz)</span>
+                <span id="val-frontL" class="font-mono font-semibold text-emerald-400">2.00m</span>
+              </div>
+              <input id="inp-frontL" type="range" min="1.00" max="4.50" step="0.05" value="2.00" class="w-full accent-emerald-500 cursor-pointer" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5 pt-1 border-t border-[var(--border)]">
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between text-xs">
+                <span class="text-[var(--muted-foreground)]">Cozinha Topo L</span>
+                <span id="val-kTopW" class="font-mono font-semibold text-sky-400">1.70m</span>
+              </div>
+              <input id="inp-kTopW" type="range" min="0.80" max="3.20" step="0.01" value="1.70" class="w-full accent-sky-500 cursor-pointer" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between text-xs">
+                <span class="text-[var(--muted-foreground)]">Cozinha Base L</span>
+                <span id="val-kBotW" class="font-mono font-semibold text-sky-400">1.50m</span>
+              </div>
+              <input id="inp-kBotW" type="range" min="0.80" max="3.20" step="0.01" value="1.50" class="w-full accent-sky-500 cursor-pointer" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5 pt-1 border-t border-[var(--border)]">
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between text-xs">
+                <span class="text-[var(--muted-foreground)]">Vão da Cozinha</span>
+                <span id="val-doorW" class="font-mono font-semibold text-[var(--foreground)]">80cm</span>
+              </div>
+              <input id="inp-doorW" type="range" min="0.50" max="1.50" step="0.02" value="0.80" class="w-full accent-amber-500 cursor-pointer" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <div class="flex justify-between text-xs">
+                <span class="text-[var(--muted-foreground)]">Altura Paredes</span>
+                <span id="val-wallH" class="font-mono font-semibold text-[var(--foreground)]">2.15m</span>
+              </div>
+              <input id="inp-wallH" type="range" min="0.25" max="2.60" step="0.05" value="2.15" class="w-full accent-amber-500 cursor-pointer" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel 3: Placed Items List -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 shadow-sm flex flex-col gap-1.5 max-h-40 overflow-y-auto">
+          <div class="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">
+            Elementos Posicionados na Cena
+          </div>
+          <div id="fixture-list" class="grid grid-cols-1 gap-1"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const canvas = document.getElementById('cad-canvas');
+      const ctx = canvas.getContext('2d');
+
+      // --- 1. Clean Space Default State (Only Structural Doors, 0 Furniture Clutter!) ---
+      const DEFAULT_STRUCTURE = {
+        totalW: 2.53,      // Front Entrance width (at z = totalL)
+        backW: 2.93,       // Back Wall width (at z = 0)
+        totalL: 6.85,      // Total Length
+        frontL: 2.00,      // Front Entrance zone length
+        kitchenTopW: 1.70, // Kitchen width at back wall (z = 0)
+        kitchenBotW: 1.50, // Kitchen width at partition (z = kitchenL)
+        doorW: 0.80,       // Kitchen doorway width
+        wallH: 2.15,       // Wall cutaway height
+        showKitchenWall: true,
+      };
+
+      const STRUCTURAL_DOORS = [
+        {
+          id: 'rollup-door-1',
+          type: 'rollup_door',
+          name: 'Porta de Aço de Enrolar (Entrada 2.53m)',
+          x: 1.265,
+          z: 6.85,
+          w: 2.53,
+          d: 0.22,
+          h: 0.45,
+          elev: 1.65,
+          rot: 0,
+          color: '#64748b',
+        },
+        {
+          id: 'restroom-door-1',
+          type: 'restroom_door',
+          name: 'Porta do Banheiro (Parede Direita)',
+          x: 2.90,
+          z: 0.52,
+          w: 0.10,
+          d: 0.78,
+          h: 2.00,
+          elev: 0,
+          rot: 0,
+          color: '#c89d66',
+        },
+      ];
+
+      // Reference Furniture Preset (only loaded if user clicks "Carregar Móveis de Referência")
+      const PRESET_FURNITURE = [
+        { id: 'counter-1', type: 'counter', name: 'Balcão de Atendimento e Caixa', x: 1.02, z: 5.86, w: 1.84, d: 0.50, h: 0.95, elev: 0, rot: 0, color: '#c79e6b' },
+        { id: 'display-freezer-1', type: 'display_freezer', name: 'Freezer Expositor Vertical (50×60cm)', x: 1.21, z: 5.16, w: 0.50, d: 0.60, h: 1.85, elev: 0, rot: 0, color: '#38bdf8' },
+        { id: 'hood-1', type: 'hood', name: 'Coifa Industrial', x: 0.44, z: 0.96, w: 0.76, d: 1.72, h: 0.45, elev: 1.65, rot: 0, color: '#cbd5e1' },
+        { id: 'fryer-1', type: 'fryer', name: 'Fritadeira (65×58cm)', x: 0.40, z: 0.44, w: 0.65, d: 0.58, h: 0.88, elev: 0, rot: 0, color: '#cbd5e1' },
+        { id: 'stove-1', type: 'stove', name: 'Fogão 4 Bocas (68×96cm)', x: 0.42, z: 1.28, w: 0.68, d: 0.96, h: 0.88, elev: 0, rot: 0, color: '#cbd5e1' },
+        { id: 'prep-1', type: 'prep', name: 'Bancada de Preparo Inox (40×100cm)', x: 1.18, z: 2.15, w: 0.40, d: 1.00, h: 0.88, elev: 0, rot: 0, color: '#cbd5e1' },
+        { id: 'comm-freezer-1', type: 'comm_freezer', name: 'Freezer Comercial (65×75cm)', x: 0.41, z: 3.02, w: 0.65, d: 0.75, h: 1.90, elev: 0, rot: 0, color: '#bac4d0' },
+        { id: 'compact-fridge-1', type: 'fridge', name: 'Geladeira Compacta (58×78cm)', x: 0.38, z: 3.98, w: 0.58, d: 0.78, h: 1.32, elev: 0, rot: 0, color: '#bac4d0' },
+        { id: 'table-1', type: 'table2', name: 'Mesa #1 (60cm + 2 Cadeiras)', x: 2.50, z: 1.50, w: 0.60, d: 0.60, h: 0.75, elev: 0, rot: 0, color: '#d9b584' },
+        { id: 'table-2', type: 'table2', name: 'Mesa #2 (60cm + 2 Cadeiras)', x: 2.42, z: 2.80, w: 0.60, d: 0.60, h: 0.75, elev: 0, rot: 0, color: '#d9b584' },
+        { id: 'table-3', type: 'table2', name: 'Mesa #3 (60cm + 2 Cadeiras)', x: 2.35, z: 4.10, w: 0.60, d: 0.60, h: 0.75, elev: 0, rot: 0, color: '#d9b584' },
+      ];
+
+      let state = {
+        structure: JSON.parse(JSON.stringify(DEFAULT_STRUCTURE)),
+        items: JSON.parse(JSON.stringify(STRUCTURAL_DOORS)), // Starts CLEAN!
+      };
+
+      try {
+        const saved = localStorage.getItem('sushi_restaurant_3d_state_v1');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.structure && Array.isArray(parsed.items)) {
+            state.structure = Object.assign({}, DEFAULT_STRUCTURE, parsed.structure);
+            state.items = parsed.items;
+          }
+        }
+      } catch (err) {
+        // Ignore storage errors in restricted environments
+      }
+
+      let selectedId = 'restroom-door-1';
+      let showFloorGrid = true;
+      let showClearanceRulers = true;
+      let showHandles = true;
+
+      // Interpolate the outer right wall X coordinate from backW (2.93m at z=0) to totalW (2.53m at z=totalL)
+      function rightWallX(z) {
+        const S = state.structure;
+        const t = Math.max(0, Math.min(1, z / Math.max(0.1, S.totalL)));
+        return S.backW + (S.totalW - S.backW) * t;
+      }
+
+      // Interpolate the tapered kitchen partition wall X coordinate at any z in [0, kitchenL]
+      function kitchenWallX(z) {
+        const S = state.structure;
+        const kitchenL = Math.max(1.0, S.totalL - S.frontL);
+        if (!S.showKitchenWall || z > kitchenL) return 0;
+        const t = Math.max(0, Math.min(1, z / kitchenL));
+        return S.kitchenTopW + (S.kitchenBotW - S.kitchenTopW) * t;
+      }
+
+      // --- 2. Camera & 3D Projection Engine ---
+      const cam = {
+        yaw: -0.66,
+        pitch: 0.82,
+        zoom: 76,
+        panX: 0,
+        panY: 16,
+        targetYaw: -0.66,
+        targetPitch: 0.82,
+        targetZoom: 76,
+        targetPanX: 0,
+        targetPanY: 16,
+      };
+
+      function project3D(wx, wy, wz) {
+        const S = state.structure;
+        const midW = (S.totalW + S.backW) / 4;
+        const cx = wx - midW;
+        const cz = wz - S.totalL / 2;
+        const cy = wy;
+
+        const cosY = Math.cos(cam.yaw);
+        const sinY = Math.sin(cam.yaw);
+        const rx = cx * cosY - cz * sinY;
+        const rz = cx * sinY + cz * cosY;
+
+        const cosP = Math.cos(cam.pitch);
+        const sinP = Math.sin(cam.pitch);
+        return {
+          x: canvas.clientWidth / 2 + cam.panX + rx * cam.zoom,
+          y: canvas.clientHeight / 2 + cam.panY + (rz * sinP - cy * cosP) * cam.zoom,
+          depth: rz * cosP + cy * sinP,
+        };
+      }
+
+      function screenToFloor(sx, sy, planeY = 0) {
+        const S = state.structure;
+        const midW = (S.totalW + S.backW) / 4;
+        const cosP = Math.cos(cam.pitch);
+        const sinP = Math.max(0.12, Math.sin(cam.pitch));
+        const cosY = Math.cos(cam.yaw);
+        const sinY = Math.sin(cam.yaw);
+
+        const rx = (sx - canvas.clientWidth / 2 - cam.panX) / cam.zoom;
+        const rz = ((sy - canvas.clientHeight / 2 - cam.panY) / cam.zoom + planeY * cosP) / sinP;
+        return {
+          x: rx * cosY + rz * sinY + midW,
+          z: -rx * sinY + rz * cosY + S.totalL / 2,
+        };
+      }
+
+      // --- 3. 3D Painter's Algorithm Queue ---
+      let renderFaces = [];
+
+      function shadeColor(hex, factor) {
+        const clean = (hex || '#d9b584').replace('#', '');
+        const num = parseInt(clean, 16) || 0xd9b584;
+        const r = Math.min(255, Math.max(0, Math.round(((num >> 16) & 255) * factor)));
+        const g = Math.min(255, Math.max(0, Math.round(((num >> 8) & 255) * factor)));
+        const b = Math.min(255, Math.max(0, Math.round((num & 255) * factor)));
+        return `rgb(${r},${g},${b})`;
+      }
+
+      function pushFace(pts3D, fillStyle, strokeStyle = null, alpha = 1, priorityBias = 0) {
+        const proj = pts3D.map((p) => project3D(p[0], p[1], p[2]));
+        let avgDepth = 0;
+        for (let i = 0; i < proj.length; i++) avgDepth += proj[i].depth;
+        avgDepth = avgDepth / proj.length + priorityBias;
+        renderFaces.push({ pts: proj, fill: fillStyle, stroke: strokeStyle, alpha, depth: avgDepth });
+      }
+
+      function pushBox(cx, y0, cz, w, h, d, baseHex, opts = {}) {
+        const rot = ((opts.rot || 0) * Math.PI) / 180;
+        const cosR = Math.cos(rot);
+        const sinR = Math.sin(rot);
+        const hw = w / 2;
+        const hd = d / 2;
+        const y1 = y0 + h;
+        const alpha = opts.alpha !== undefined ? opts.alpha : 1;
+        const stroke = opts.stroke || 'rgba(15,23,42,0.4)';
+        const bias = opts.bias || 0;
+
+        const corners = [
+          [-hw, -hd],
+          [hw, -hd],
+          [hw, hd],
+          [-hw, hd],
+        ].map(([lx, lz]) => [cx + lx * cosR - lz * sinR, cz + lx * sinR + lz * cosR]);
+
+        const b0 = [corners[0][0], y0, corners[0][1]];
+        const b1 = [corners[1][0], y0, corners[1][1]];
+        const b2 = [corners[2][0], y0, corners[2][1]];
+        const b3 = [corners[3][0], y0, corners[3][1]];
+
+        const t0 = [corners[0][0], y1, corners[0][1]];
+        const t1 = [corners[1][0], y1, corners[1][1]];
+        const t2 = [corners[2][0], y1, corners[2][1]];
+        const t3 = [corners[3][0], y1, corners[3][1]];
+
+        pushFace([t0, t1, t2, t3], opts.topColor || shadeColor(baseHex, 1.12), stroke, alpha, bias + 0.02);
+        pushFace([b0, b1, t1, t0], shadeColor(baseHex, 0.82), stroke, alpha, bias);
+        pushFace([b1, b2, t2, t1], shadeColor(baseHex, 0.94), stroke, alpha, bias);
+        pushFace([b2, b3, t3, t2], shadeColor(baseHex, 0.88), stroke, alpha, bias);
+        pushFace([b3, b0, t0, t3], shadeColor(baseHex, 0.74), stroke, alpha, bias);
+      }
+
+      function pushWallSegment(x1, z1, x2, z2, height, thickness, wallHex, capHex = '#1e2229') {
+        const dx = x2 - x1;
+        const dz = z2 - z1;
+        const len = Math.hypot(dx, dz);
+        if (len < 0.02) return;
+        const nx = (-dz / len) * (thickness / 2);
+        const nz = (dx / len) * (thickness / 2);
+
+        const p0 = [x1 + nx, z1 + nz];
+        const p1 = [x2 + nx, z2 + nz];
+        const p2 = [x2 - nx, z2 - nz];
+        const p3 = [x1 - nx, z1 - nz];
+
+        const b0 = [p0[0], 0, p0[1]];
+        const b1 = [p1[0], 0, p1[1]];
+        const b2 = [p2[0], 0, p2[1]];
+        const b3 = [p3[0], 0, p3[1]];
+
+        const t0 = [p0[0], height, p0[1]];
+        const t1 = [p1[0], height, p1[1]];
+        const t2 = [p2[0], height, p2[1]];
+        const t3 = [p3[0], height, p3[1]];
+
+        const stroke = 'rgba(15,23,42,0.45)';
+        pushFace([b0, b1, t1, t0], shadeColor(wallHex, 0.95), stroke, 1);
+        pushFace([b1, b2, t2, t1], shadeColor(wallHex, 0.82), stroke, 1);
+        pushFace([b2, b3, t3, t2], shadeColor(wallHex, 0.90), stroke, 1);
+        pushFace([b3, b0, t0, t3], shadeColor(wallHex, 0.78), stroke, 1);
+        pushFace([t0, t1, t2, t3], capHex, stroke, 1, 0.03);
+      }
+
+      // --- 4. Build Complete 3D Architectural Scene ---
+      function buildSceneGeometry() {
+        renderFaces = [];
+        const S = state.structure;
+        const backW = S.backW;
+        const kitchenL = Math.max(1.0, S.totalL - S.frontL);
+        const rightAtKitchenBot = rightWallX(kitchenL);
+
+        // Base Plinth
+        const maxW = Math.max(backW, S.totalW);
+        pushBox(maxW / 2, -0.12, S.totalL / 2, maxW + 0.28, 0.12, S.totalL + 0.28, '#1e222a', {
+          topColor: '#272c35',
+          bias: -2.0,
+        });
+
+        // Main Floor Trapezoid (2.93m back -> 2.53m front entrance)
+        pushFace(
+          [
+            [0, 0.005, 0],
+            [backW, 0.005, 0],
+            [S.totalW, 0.005, S.totalL],
+            [0, 0.005, S.totalL],
+          ],
+          '#d8d3c8',
+          '#b5afa3',
+          1,
+          -1.5
+        );
+
+        // Front Entrance Area floor zone (z: kitchenL .. totalL)
+        pushFace(
+          [
+            [0, 0.008, kitchenL],
+            [rightAtKitchenBot, 0.008, kitchenL],
+            [S.totalW, 0.008, S.totalL],
+            [0, 0.008, S.totalL],
+          ],
+          '#cfc7b8',
+          '#b5afa3',
+          1,
+          -1.45
+        );
+
+        // Enclosed Kitchen Tapered Floor Polygon (if Kitchen Wall is ON)
+        if (S.showKitchenWall) {
+          pushFace(
+            [
+              [0, 0.012, 0],
+              [S.kitchenTopW, 0.012, 0],
+              [S.kitchenBotW, 0.012, kitchenL],
+              [0, 0.012, kitchenL],
+            ],
+            '#383d45',
+            '#23272e',
+            1,
+            -1.4
+          );
+        }
+
+        // Exterior Cutaway Walls
+        const wh = S.wallH;
+        // Left Wall
+        pushWallSegment(0, 0, 0, S.totalL, wh, 0.09, '#ebe6dc');
+        // Back Wall (2.93m)
+        pushWallSegment(0, 0, backW, 0, wh, 0.09, '#ebe6dc');
+
+        // Tapered Right Wall (with doorway opening for Back-Right Restroom Door)
+        const rrDoorItem = state.items.find((i) => i.type === 'restroom_door');
+        if (rrDoorItem) {
+          const dZ0 = Math.max(0.08, rrDoorItem.z - rrDoorItem.d / 2);
+          const dZ1 = Math.min(S.totalL - 0.1, rrDoorItem.z + rrDoorItem.d / 2);
+          pushWallSegment(backW, 0, rightWallX(dZ0), dZ0, wh, 0.09, '#ebe6dc');
+          pushWallSegment(rightWallX(dZ1), dZ1, S.totalW, S.totalL, wh, 0.09, '#ebe6dc');
+        } else {
+          pushWallSegment(backW, 0, S.totalW, S.totalL, wh, 0.09, '#ebe6dc');
+        }
+
+        // Tapered Kitchen Partition Wall + Front Kitchen Wall with 80cm Open Walk-Through (no door panel)
+        if (S.showKitchenWall) {
+          pushWallSegment(S.kitchenTopW, 0, S.kitchenBotW, kitchenL, wh, 0.08, '#c9a26e', '#23272f');
+          const openW = Math.min(S.kitchenBotW - 0.12, S.doorW || 0.80);
+          const openStart = Math.max(0.15, (S.kitchenBotW - openW) * 0.5);
+          const openEnd = Math.min(S.kitchenBotW - 0.05, openStart + openW);
+          if (openStart > 0.04) {
+            pushWallSegment(0, kitchenL, openStart, kitchenL, wh, 0.08, '#ebe6dc');
+          }
+          if (S.kitchenBotW - openEnd > 0.04) {
+            pushWallSegment(openEnd, kitchenL, S.kitchenBotW, kitchenL, wh, 0.08, '#ebe6dc');
+          }
+        }
+
+        // Front Roll-Up Steel Door Vertical Guide Rails at z = totalL
+        pushBox(0.045, 0, S.totalL, 0.09, wh, 0.10, '#475569', { topColor: '#1e293b' });
+        pushBox(S.totalW - 0.045, 0, S.totalL, 0.09, wh, 0.10, '#475569', { topColor: '#1e293b' });
+
+        // Render All Placed Items
+        state.items.forEach((item) => {
+          const isSel = item.id === selectedId;
+          const highlightStroke = isSel ? '#f59e0b' : 'rgba(15,23,42,0.42)';
+          const elev = item.elev || 0;
+          const h = item.h || 0.8;
+          const baseColor = item.color || '#d9b584';
+
+          if (item.type === 'table2' || item.type === 'table4') {
+            // Pedestal & Tabletop
+            pushBox(item.x, elev, item.z, Math.min(0.36, item.w * 0.6), 0.03, Math.min(0.36, item.d * 0.6), '#23272e', {
+              rot: item.rot,
+              stroke: highlightStroke,
+            });
+            pushBox(item.x, elev + 0.03, item.z, 0.08, Math.max(0.1, h - 0.07), 0.08, '#23272e', { rot: item.rot });
+            pushBox(item.x, elev + h - 0.045, item.z, item.w, 0.045, item.d, baseColor, {
+              rot: item.rot,
+              stroke: highlightStroke,
+              topColor: isSel ? '#fde68a' : undefined,
+            });
+
+            // Chairs on each side of the table
+            const rad = ((item.rot || 0) * Math.PI) / 180;
+            const offsetZ = item.d / 2 + 0.21;
+            const chairOffsetsX = item.type === 'table4' ? [-item.w * 0.26, item.w * 0.26] : [0];
+            chairOffsetsX.forEach((lx) => {
+              [-1, 1].forEach((dir) => {
+                const lz = dir * offsetZ;
+                const chX = item.x + lx * Math.cos(rad) - lz * Math.sin(rad);
+                const chZ = item.z + lx * Math.sin(rad) + lz * Math.cos(rad);
+                pushBox(chX, elev, chZ, 0.38, 0.44, 0.36, shadeColor(baseColor, 0.86), {
+                  rot: item.rot,
+                  stroke: highlightStroke,
+                });
+              });
+            });
+          } else if (item.type === 'rollup_door') {
+            item.x = S.totalW / 2;
+            item.z = S.totalL;
+            item.w = S.totalW;
+            const drumY = Math.max(1.2, S.wallH - 0.24);
+            pushBox(item.x, drumY, S.totalL, S.totalW, 0.26, 0.24, baseColor, {
+              stroke: highlightStroke,
+              topColor: isSel ? '#fde68a' : '#94a3b8',
+            });
+            const slatCount = Math.max(2, Math.round((item.h || 0.45) / 0.08));
+            const slatH = 0.075;
+            for (let s = 0; s < slatCount; s++) {
+              const sy = drumY - (s + 1) * slatH;
+              if (sy > 0.05) {
+                pushBox(item.x, sy, S.totalL, S.totalW - 0.12, slatH - 0.008, 0.045, s % 2 === 0 ? '#94a3b8' : '#cbd5e1', {
+                  stroke: highlightStroke,
+                });
+              }
+            }
+          } else if (item.type === 'restroom_door') {
+            const wallX = rightWallX(item.z);
+            item.x = wallX;
+            const doorH = Math.min(item.h || 2.0, S.wallH);
+            const z0 = item.z - item.d / 2;
+            const wx0 = rightWallX(z0);
+            pushBox(wallX, 0, item.z, 0.11, doorH, item.d, baseColor, {
+              stroke: highlightStroke,
+              topColor: isSel ? '#fde68a' : '#785932',
+            });
+            pushWallSegment(wx0 + 0.02, z0, wx0 + 0.42, z0 + item.d * 0.72, doorH * 0.96, 0.04, '#d9b584', isSel ? '#f59e0b' : '#785932');
+          } else if (item.type === 'display_freezer') {
+            pushBox(item.x, elev, item.z, item.w, h, item.d, '#222730', { rot: item.rot, stroke: highlightStroke });
+            pushBox(item.x, elev + 0.16, item.z + 0.03, item.w * 0.84, Math.max(0.2, h - 0.3), item.d * 0.82, baseColor, {
+              rot: item.rot,
+              alpha: 0.55,
+              stroke: isSel ? '#f59e0b' : '#38bdf8',
+            });
+          } else if (item.type === 'l_counter') {
+            const armW = Math.max(0.25, Math.min(item.armW || 0.50, Math.min(item.w, item.d) - 0.15));
+            const rad = ((item.rot || 0) * Math.PI) / 180;
+            const cos = Math.cos(rad), sin = Math.sin(rad);
+            const toWorld = (lx, lz) => [
+              item.x + lx * cos - lz * sin,
+              item.z + lx * sin + lz * cos,
+            ];
+            const bodyH = Math.max(0.10, h - 0.06);
+            const topH = 0.06;
+            const bodyColor = shadeColor(baseColor, 0.78);
+            const capColor = isSel ? '#fde68a' : shadeColor(baseColor, 1.12);
+
+            // Braço 1 (horizontal no espaço local: largura item.w, profundidade armW)
+            const [a1x, a1z] = toWorld(0, -item.d / 2 + armW / 2);
+            pushBox(a1x, elev, a1z, item.w, bodyH, armW, bodyColor, { rot: item.rot, stroke: highlightStroke });
+            pushBox(a1x, elev + bodyH, a1z, item.w + 0.03, topH, armW + 0.03, baseColor, {
+              rot: item.rot,
+              stroke: highlightStroke,
+              topColor: capColor,
+            });
+
+            // Braço 2 (perna lateral do L: largura armW, comprimento restante item.d - armW)
+            const legD = Math.max(0.12, item.d - armW);
+            const sideSign = item.flipL ? 1 : -1;
+            const [a2x, a2z] = toWorld(sideSign * (item.w / 2 - armW / 2), -item.d / 2 + armW + legD / 2);
+            pushBox(a2x, elev, a2z, armW, bodyH, legD, bodyColor, { rot: item.rot, stroke: highlightStroke });
+            pushBox(a2x, elev + bodyH, a2z, armW + 0.03, topH, legD + 0.03, baseColor, {
+              rot: item.rot,
+              stroke: highlightStroke,
+              topColor: capColor,
+            });
+          } else {
+            // Universal customizable 3D fixture / bench / stove / fryer / counter / custom wall / box
+            pushBox(item.x, elev, item.z, item.w, h, item.d, baseColor, {
+              rot: item.rot,
+              stroke: highlightStroke,
+              topColor: isSel ? '#fde68a' : undefined,
+            });
+          }
+        });
+      }
+
+      // --- 5. Interactive 3D Wall Handles ---
+      function getWallHandles() {
+        const S = state.structure;
+        const kitchenL = Math.max(1.0, S.totalL - S.frontL);
+        const list = [
+          { id: 'handle-backW', label: `Larg. Fundo: ${S.backW.toFixed(2)}m`, x: S.backW, y: S.wallH * 0.55, z: 0.25, color: '#f59e0b' },
+          { id: 'handle-totalW', label: `Larg. Entrada: ${S.totalW.toFixed(2)}m`, x: S.totalW, y: S.wallH * 0.55, z: S.totalL - 0.35, color: '#f59e0b' },
+          { id: 'handle-totalL', label: `Comp. Total: ${S.totalL.toFixed(2)}m`, x: S.totalW * 0.5, y: 0.35, z: S.totalL, color: '#f59e0b' },
+          { id: 'handle-frontL', label: `Comp. Entrada: ${S.frontL.toFixed(2)}m`, x: rightWallX(kitchenL) * 0.5, y: 0.2, z: kitchenL, color: '#34d399' },
+        ];
+        if (S.showKitchenWall) {
+          list.push(
+            { id: 'handle-kTopW', label: `Cozinha Topo: ${S.kitchenTopW.toFixed(2)}m`, x: S.kitchenTopW, y: S.wallH * 0.65, z: 0.45, color: '#38bdf8' },
+            { id: 'handle-kBotW', label: `Cozinha Base: ${S.kitchenBotW.toFixed(2)}m`, x: S.kitchenBotW, y: S.wallH * 0.65, z: kitchenL - 0.35, color: '#38bdf8' }
+          );
+        }
+        return list;
+      }
+
+      // --- 6. Draw 50cm/1m Architectural Floor Grid & Live Wall Clearance Rulers ---
+      function drawFloorScaleGrid() {
+        if (!showFloorGrid) return;
+        const S = state.structure;
+        const maxW = Math.max(S.backW, S.totalW);
+        ctx.save();
+
+        // 50cm grid lines inside the floor plan trapezoid
+        for (let z = 0; z <= S.totalL + 0.01; z += 0.5) {
+          const rw = rightWallX(z);
+          const p1 = project3D(0, 0.018, z);
+          const p2 = project3D(rw, 0.018, z);
+          const isMeter = Math.abs(z - Math.round(z)) < 0.01;
+          ctx.strokeStyle = isMeter ? 'rgba(15, 23, 42, 0.32)' : 'rgba(15, 23, 42, 0.14)';
+          ctx.lineWidth = isMeter ? 1.3 : 0.8;
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+
+          if (isMeter && z > 0 && z < S.totalL) {
+            const lblP = project3D(-0.18, 0.02, z);
+            ctx.font = '600 10px ui-monospace, monospace';
+            ctx.fillStyle = '#94a3b8';
+            ctx.textAlign = 'right';
+            ctx.fillText(`${z.toFixed(0)}m`, lblP.x, lblP.y);
+          }
+        }
+
+        for (let x = 0.5; x < maxW; x += 0.5) {
+          const isMeter = Math.abs(x - Math.round(x)) < 0.01;
+          ctx.strokeStyle = isMeter ? 'rgba(15, 23, 42, 0.32)' : 'rgba(15, 23, 42, 0.14)';
+          ctx.lineWidth = isMeter ? 1.3 : 0.8;
+          const p1 = project3D(x, 0.018, 0);
+          const p2 = project3D(Math.min(x, S.totalW), 0.018, S.totalL);
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // Draw live distance rulers from the selected item to surrounding walls
+      function drawSelectedClearanceRulers() {
+        if (!showClearanceRulers) return;
+        const sel = state.items.find((i) => i.id === selectedId);
+        if (!sel || sel.type === 'rollup_door' || sel.type === 'restroom_door') return;
+
+        const S = state.structure;
+        const rad = ((sel.rot || 0) * Math.PI) / 180;
+        const effW = Math.abs(sel.w * Math.cos(rad)) + Math.abs(sel.d * Math.sin(rad));
+        const effD = Math.abs(sel.w * Math.sin(rad)) + Math.abs(sel.d * Math.cos(rad));
+
+        const leftEdge = sel.x - effW / 2;
+        const rightEdge = sel.x + effW / 2;
+        const backEdge = sel.z - effD / 2;
+        const frontEdge = sel.z + effD / 2;
+
+        const rWall = rightWallX(sel.z);
+        const kWall = kitchenWallX(sel.z);
+
+        // Left reference wall is either the Kitchen Partition Wall (if item is to its right) or the Left Exterior Wall (0)
+        const leftRefX = kWall > 0 && sel.x > kWall ? kWall : 0;
+        const rightRefX = kWall > 0 && sel.x < kWall ? kWall : rWall;
+
+        const distLeft = Math.max(0, leftEdge - leftRefX);
+        const distRight = Math.max(0, rightRefX - rightEdge);
+        const distBack = Math.max(0, backEdge);
+        const distFront = Math.max(0, S.totalL - frontEdge);
+
+        drawDimensionLine([leftRefX, 0.08, sel.z], [leftEdge, 0.08, sel.z], `${Math.round(distLeft * 100)}cm`, '#38bdf8');
+        drawDimensionLine([rightEdge, 0.08, sel.z], [rightRefX, 0.08, sel.z], `${Math.round(distRight * 100)}cm`, '#34d399');
+        drawDimensionLine([sel.x, 0.08, 0], [sel.x, 0.08, backEdge], `${distBack.toFixed(2)}m`, '#fbbf24');
+
+        const badge = document.getElementById('clearance-badge');
+        if (badge) {
+          badge.textContent = `${sel.name}: Esq ${Math.round(distLeft * 100)}cm • Dir ${Math.round(distRight * 100)}cm • Fundo ${distBack.toFixed(2)}m • Frente ${distFront.toFixed(2)}m`;
+        }
+      }
+
+      // --- 7. Main Render Loop ---
+      function render() {
+        cam.yaw += (cam.targetYaw - cam.yaw) * 0.18;
+        cam.pitch += (cam.targetPitch - cam.pitch) * 0.18;
+        cam.zoom += (cam.targetZoom - cam.zoom) * 0.18;
+        cam.panX += (cam.targetPanX - cam.panX) * 0.18;
+        cam.panY += (cam.targetPanY - cam.panY) * 0.18;
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = canvas.clientWidth;
+        const h = canvas.clientHeight;
+        if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+          canvas.width = Math.round(w * dpr);
+          canvas.height = Math.round(h * dpr);
+        }
+
+        ctx.save();
+        ctx.scale(dpr, dpr);
+
+        const grad = ctx.createRadialGradient(w / 2, h / 2, 40, w / 2, h / 2, Math.max(w, h) * 0.75);
+        grad.addColorStop(0, '#1b202b');
+        grad.addColorStop(1, '#0e1117');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        buildSceneGeometry();
+        renderFaces.sort((a, b) => a.depth - b.depth);
+
+        for (let i = 0; i < renderFaces.length; i++) {
+          const f = renderFaces[i];
+          const pts = f.pts;
+          ctx.save();
+          ctx.globalAlpha = f.alpha;
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let j = 1; j < pts.length; j++) ctx.lineTo(pts[j].x, pts[j].y);
+          ctx.closePath();
+          ctx.fillStyle = f.fill;
+          ctx.fill();
+          if (f.stroke) {
+            ctx.strokeStyle = f.stroke;
+            ctx.lineWidth = f.stroke === '#f59e0b' ? 2.2 : 0.85;
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        // Draw 50cm/1m floor scale grid & live clearance rulers
+        drawFloorScaleGrid();
+        drawSelectedClearanceRulers();
+
+        // Main outer dimension callouts
+        const S = state.structure;
+        const kitchenL = Math.max(1.0, S.totalL - S.frontL);
+        drawDimensionLine([0, 0.05, S.totalL + 0.34], [S.totalW, 0.05, S.totalL + 0.34], `Entrada: ${S.totalW.toFixed(2)}m`, '#fbbf24');
+        drawDimensionLine([0, 0.05, -0.36], [S.backW, 0.05, -0.36], `Parede Fundo: ${S.backW.toFixed(2)}m`, '#fbbf24');
+        drawDimensionLine([-0.34, 0.05, 0], [-0.34, 0.05, kitchenL], `Cozinha: ${kitchenL.toFixed(2)}m`, '#38bdf8');
+        drawDimensionLine([-0.34, 0.05, kitchenL], [-0.34, 0.05, S.totalL], `Entrada: ${S.frontL.toFixed(2)}m`, '#34d399');
+        if (S.showKitchenWall) {
+          const openW = Math.min(S.kitchenBotW - 0.12, S.doorW || 0.80);
+          const openStart = Math.max(0.15, (S.kitchenBotW - openW) * 0.5);
+          const openEnd = Math.min(S.kitchenBotW - 0.05, openStart + openW);
+          drawDimensionLine([openStart, 0.04, kitchenL], [openEnd, 0.04, kitchenL], `Vão ${Math.round((openEnd - openStart) * 100)}cm`, '#34d399');
+        }
+
+        // Draw Interactive Wall Drag Handles
+        if (showHandles) {
+          getWallHandles().forEach((hNode) => {
+            const p = project3D(hNode.x, hNode.y, hNode.z);
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+            ctx.fillStyle = hNode.color;
+            ctx.fill();
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = '#0f172a';
+            ctx.stroke();
+
+            ctx.font = '600 11px ui-monospace, monospace';
+            const tw = ctx.measureText(hNode.label).width;
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+            ctx.beginPath();
+            ctx.roundRect(p.x - tw / 2 - 6, p.y - 28, tw + 12, 18, 4);
+            ctx.fill();
+            ctx.strokeStyle = hNode.color;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.fillStyle = '#f8fafc';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(hNode.label, p.x, p.y - 19);
+            ctx.restore();
+          });
+        }
+
+        // Draw Selected Item Label on Canvas
+        const selItem = state.items.find((i) => i.id === selectedId);
+        if (selItem) {
+          const p = project3D(selItem.x, (selItem.elev || 0) + (selItem.h || 0.8) + 0.18, selItem.z);
+          const badgeText = `${selItem.name} (${Math.round(selItem.w * 100)}×${Math.round(selItem.d * 100)}cm)`;
+          ctx.save();
+          ctx.font = '600 11px system-ui, sans-serif';
+          const tw = ctx.measureText(badgeText).width;
+          ctx.fillStyle = 'rgba(245, 158, 11, 0.95)';
+          ctx.beginPath();
+          ctx.roundRect(p.x - tw / 2 - 8, p.y - 12, tw + 16, 20, 5);
+          ctx.fill();
+          ctx.fillStyle = '#0f172a';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(badgeText, p.x, p.y - 2);
+          ctx.restore();
+        }
+
+        ctx.restore();
+        requestAnimationFrame(render);
+      }
+
+      function drawDimensionLine(pA, pB, text, color) {
+        const a = project3D(pA[0], pA[1], pA[2]);
+        const b = project3D(pB[0], pB[1], pB[2]);
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.6;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const mx = (a.x + b.x) / 2;
+        const my = (a.y + b.y) / 2;
+        ctx.font = '600 11px ui-monospace, monospace';
+        const tw = ctx.measureText(text).width;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+        ctx.beginPath();
+        ctx.roundRect(mx - tw / 2 - 6, my - 10, tw + 12, 18, 4);
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, mx, my - 1);
+        ctx.restore();
+      }
+
+      // --- 8. Pointer Interaction: Drag Wall Handles, Drag Any Item, or Orbit/Pan + Pinch-to-Zoom ---
+      let dragMode = null;
+      let activeHandleId = null;
+      let dragItemOffset = { x: 0, z: 0 };
+      let lastMouse = { x: 0, y: 0 };
+      let pinchStartDist = 0;
+      let pinchStartZoom = 76;
+
+      canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+          dragMode = 'pinch';
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          pinchStartDist = Math.hypot(dx, dy);
+          pinchStartZoom = cam.targetZoom;
+          e.preventDefault();
+        }
+      }, { passive: false });
+
+      canvas.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2 && pinchStartDist > 10) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          const dist = Math.hypot(dx, dy);
+          cam.targetZoom = Math.max(36, Math.min(165, pinchStartZoom * (dist / pinchStartDist)));
+          e.preventDefault();
+        }
+      }, { passive: false });
+
+      canvas.addEventListener('pointerdown', (e) => {
+        if (dragMode === 'pinch') return;
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        lastMouse = { x: mx, y: my };
+
+        const isTouch = e.pointerType === 'touch';
+        const handleRadius = isTouch ? 24 : 14;
+        const itemRadius = isTouch ? 44 : 34;
+
+        if (showHandles) {
+          for (const hNode of getWallHandles()) {
+            const p = project3D(hNode.x, hNode.y, hNode.z);
+            if (Math.hypot(mx - p.x, my - p.y) <= handleRadius) {
+              dragMode = 'handle';
+              activeHandleId = hNode.id;
+              canvas.setPointerCapture(e.pointerId);
+              return;
+            }
+          }
+        }
+
+        let hitItem = null;
+        let bestDist = itemRadius;
+        for (const item of state.items) {
+          const p = project3D(item.x, (item.elev || 0) + (item.h || 0.7) * 0.45, item.z);
+          const dist = Math.hypot(mx - p.x, my - p.y);
+          if (dist < bestDist) {
+            bestDist = dist;
+            hitItem = item;
+          }
+        }
+
+        if (hitItem) {
+          selectedId = hitItem.id;
+          syncUI();
+          const floorPt = screenToFloor(mx, my, hitItem.elev || 0.35);
+          dragItemOffset.x = hitItem.x - floorPt.x;
+          dragItemOffset.z = hitItem.z - floorPt.z;
+          dragMode = 'item';
+          canvas.setPointerCapture(e.pointerId);
+          return;
+        }
+
+        dragMode = e.button === 2 || e.shiftKey ? 'pan' : 'orbit';
+        canvas.setPointerCapture(e.pointerId);
+      });
+
+      canvas.addEventListener('pointermove', (e) => {
+        if (!dragMode || dragMode === 'pinch') return;
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const dx = mx - lastMouse.x;
+        const dy = my - lastMouse.y;
+        lastMouse = { x: mx, y: my };
+
+        const S = state.structure;
+
+        if (dragMode === 'handle') {
+          const fp = screenToFloor(mx, my, S.wallH * 0.5);
+          if (activeHandleId === 'handle-totalW') {
+            S.totalW = Math.max(1.8, Math.min(4.8, Math.round(fp.x * 100) / 100));
+          } else if (activeHandleId === 'handle-backW') {
+            S.backW = Math.max(1.8, Math.min(4.8, Math.round(fp.x * 100) / 100));
+          } else if (activeHandleId === 'handle-totalL') {
+            S.totalL = Math.max(4.0, Math.min(11.0, Math.round(fp.z * 20) / 20));
+          } else if (activeHandleId === 'handle-kTopW') {
+            S.kitchenTopW = Math.max(0.8, Math.min(S.backW - 0.4, Math.round(fp.x * 100) / 100));
+          } else if (activeHandleId === 'handle-kBotW') {
+            S.kitchenBotW = Math.max(0.8, Math.min(S.totalW - 0.4, Math.round(fp.x * 100) / 100));
+          } else if (activeHandleId === 'handle-frontL') {
+            const newKitchenL = Math.max(1.8, Math.min(S.totalL - 1.0, fp.z));
+            S.frontL = Math.round((S.totalL - newKitchenL) * 20) / 20;
+          }
+          syncUI();
+        } else if (dragMode === 'item') {
+          const sel = state.items.find((i) => i.id === selectedId);
+          if (sel) {
+            const fp = screenToFloor(mx, my, sel.elev || 0.35);
+            const maxX = rightWallX(sel.z) - 0.05;
+            sel.x = Math.max(0.05, Math.min(maxX, Math.round((fp.x + dragItemOffset.x) * 50) / 50));
+            sel.z = Math.max(0.05, Math.min(S.totalL - 0.05, Math.round((fp.z + dragItemOffset.z) * 50) / 50));
+            syncUI();
+          }
+        } else if (dragMode === 'orbit') {
+          cam.targetYaw -= dx * 0.0075;
+          cam.targetPitch = Math.max(0.22, Math.min(1.48, cam.targetPitch + dy * 0.0065));
+        } else if (dragMode === 'pan') {
+          cam.targetPanX += dx;
+          cam.targetPanY += dy;
+        }
+      });
+
+      window.addEventListener('pointerup', () => {
+        dragMode = null;
+        activeHandleId = null;
+      });
+      canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+      canvas.addEventListener(
+        'wheel',
+        (e) => {
+          e.preventDefault();
+          cam.targetZoom = Math.max(36, Math.min(165, cam.targetZoom - e.deltaY * 0.06));
+        },
+        { passive: false }
+      );
+
+      // --- 9. Catalog Item Generator ("+ Click Any Item to Add") ---
+      const CATALOG_SPECS = {
+        table2: { type: 'table2', name: 'Mesa 2 Lugares (60×60cm)', w: 0.60, d: 0.60, h: 0.75, elev: 0, color: '#d9b584', zone: 'dining' },
+        table4: { type: 'table4', name: 'Mesa 4 Lugares (120×60cm)', w: 1.20, d: 0.60, h: 0.75, elev: 0, color: '#d9b584', zone: 'dining' },
+        counter: { type: 'counter', name: 'Balcão de Atendimento', w: 1.80, d: 0.50, h: 0.95, elev: 0, color: '#c79e6b', zone: 'front' },
+        l_counter: { type: 'l_counter', name: 'Balcão em L (160×140cm)', w: 1.60, d: 1.40, h: 0.95, armW: 0.50, flipL: false, elev: 0, color: '#c79e6b', zone: 'front' },
+        sushibar: { type: 'counter', name: 'Balcão Sushi Bar', w: 0.45, d: 2.00, h: 1.00, elev: 0, color: '#d9b584', zone: 'dining' },
+        stool: { type: 'box', name: 'Cadeira / Banqueta', w: 0.40, d: 0.40, h: 0.48, elev: 0, color: '#8c6239', zone: 'dining' },
+        display_freezer: { type: 'display_freezer', name: 'Freezer Expositor (50×60cm)', w: 0.50, d: 0.60, h: 1.85, elev: 0, color: '#38bdf8', zone: 'front' },
+        prep: { type: 'prep', name: 'Bancada Inox (40×100cm)', w: 0.40, d: 1.00, h: 0.88, elev: 0, color: '#cbd5e1', zone: 'kitchen' },
+        sink: { type: 'prep', name: 'Pia Inox (60×100cm)', w: 0.60, d: 1.00, h: 0.88, elev: 0, color: '#94a3b8', zone: 'kitchen' },
+        fryer: { type: 'fryer', name: 'Fritadeira (65×58cm)', w: 0.65, d: 0.58, h: 0.88, elev: 0, color: '#cbd5e1', zone: 'kitchen' },
+        stove: { type: 'stove', name: 'Fogão 4 Bocas (68×96cm)', w: 0.68, d: 0.96, h: 0.88, elev: 0, color: '#cbd5e1', zone: 'kitchen' },
+        hood: { type: 'hood', name: 'Coifa Industrial', w: 0.76, d: 1.70, h: 0.45, elev: 1.65, color: '#cbd5e1', zone: 'kitchen' },
+        comm_freezer: { type: 'comm_freezer', name: 'Freezer Comercial (65×75cm)', w: 0.65, d: 0.75, h: 1.90, elev: 0, color: '#bac4d0', zone: 'kitchen' },
+        fridge: { type: 'fridge', name: 'Geladeira Compacta (58×78cm)', w: 0.58, d: 0.78, h: 1.32, elev: 0, color: '#bac4d0', zone: 'kitchen' },
+        wall: { type: 'wall', name: 'Parede Divisória', w: 1.00, d: 0.08, h: 2.15, elev: 0, color: '#d4af7a', zone: 'front' },
+        box: { type: 'box', name: 'Bloco / Objeto Livre', w: 0.60, d: 0.60, h: 0.85, elev: 0, color: '#34d399', zone: 'front' },
+      };
+
+      document.querySelectorAll('[data-add]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const key = btn.getAttribute('data-add');
+          const spec = CATALOG_SPECS[key];
+          if (!spec) return;
+          const S = state.structure;
+          const kitchenL = Math.max(1.0, S.totalL - S.frontL);
+          const sameTypeCount = state.items.filter((i) => i.name.startsWith(spec.name.split(' (')[0])).length + 1;
+
+          // Smart initial placement based on zone, with slight offset so multiple clicks don't overlap identically
+          let px = 1.25;
+          let pz = 3.2;
+          if (spec.zone === 'dining') {
+            pz = Math.min(kitchenL - 0.5, 1.4 + ((sameTypeCount - 1) * 1.15) % Math.max(1.5, kitchenL - 1.2));
+            px = rightWallX(pz) - spec.w / 2 - 0.06;
+          } else if (spec.zone === 'kitchen') {
+            pz = Math.min(kitchenL - 0.6, 0.7 + ((sameTypeCount - 1) * 0.95) % Math.max(1.5, kitchenL - 1.0));
+            px = 0.45 + ((sameTypeCount - 1) % 2) * 0.55;
+          } else {
+            pz = kitchenL + S.frontL * 0.55;
+            px = S.totalW * 0.48;
+          }
+
+          const newItem = {
+            id: key + '-' + Date.now(),
+            type: spec.type,
+            name: `${spec.name} #${sameTypeCount}`,
+            x: Math.round(px * 50) / 50,
+            z: Math.round(pz * 50) / 50,
+            w: spec.w,
+            d: spec.d,
+            h: spec.h,
+            armW: spec.armW || 0.50,
+            flipL: !!spec.flipL,
+            elev: spec.elev,
+            rot: 0,
+            color: spec.color,
+          };
+          state.items.push(newItem);
+          selectedId = newItem.id;
+          syncUI();
+        });
+      });
+
+      // --- 10. UI Synchronization & Customizer Wiring ---
+      function syncUI() {
+        try {
+          localStorage.setItem('sushi_restaurant_3d_state_v1', JSON.stringify(state));
+        } catch (err) {
+          // Ignore storage errors
+        }
+        const S = state.structure;
+        const kitchenL = Math.max(1.0, S.totalL - S.frontL);
+        const totalArea = (((S.backW + S.totalW) / 2) * S.totalL).toFixed(2);
+        const placedCount = Math.max(0, state.items.length - 2);
+
+        document.getElementById('header-metrics').textContent =
+          `Fundo ${S.backW.toFixed(2)}m → Entrada ${S.totalW.toFixed(2)}m × ${S.totalL.toFixed(2)}m (${totalArea} m²) • ${placedCount} ${placedCount === 1 ? 'Item Adicionado' : 'Itens Adicionados'}`;
+
+        document.getElementById('val-totalW').textContent = S.totalW.toFixed(2) + 'm';
+        document.getElementById('inp-totalW').value = S.totalW;
+        document.getElementById('val-backW').textContent = S.backW.toFixed(2) + 'm';
+        document.getElementById('inp-backW').value = S.backW;
+        document.getElementById('val-totalL').textContent = S.totalL.toFixed(2) + 'm';
+        document.getElementById('inp-totalL').value = S.totalL;
+        document.getElementById('val-frontL').textContent = S.frontL.toFixed(2) + 'm';
+        document.getElementById('val-kitchenL').textContent = kitchenL.toFixed(2) + 'm';
+        document.getElementById('inp-frontL').value = S.frontL;
+        document.getElementById('val-kTopW').textContent = S.kitchenTopW.toFixed(2) + 'm';
+        document.getElementById('inp-kTopW').value = S.kitchenTopW;
+        document.getElementById('val-kBotW').textContent = S.kitchenBotW.toFixed(2) + 'm';
+        document.getElementById('inp-kBotW').value = S.kitchenBotW;
+        document.getElementById('val-doorW').textContent = Math.round(S.doorW * 100) + 'cm';
+        document.getElementById('inp-doorW').value = S.doorW;
+        document.getElementById('val-wallH').textContent = S.wallH.toFixed(2) + 'm';
+        document.getElementById('inp-wallH').value = S.wallH;
+
+        const sel = state.items.find((i) => i.id === selectedId);
+        if (sel) {
+          const isL = sel.type === 'l_counter';
+          const lblW = document.getElementById('lbl-itemW');
+          const lblD = document.getElementById('lbl-itemD');
+          const lControls = document.getElementById('l-counter-controls');
+          const btnFlipL = document.getElementById('btn-flip-l');
+          if (lblW) lblW.textContent = isL ? 'Braço 1 (X)' : 'Largura (X)';
+          if (lblD) lblD.textContent = isL ? 'Braço 2 (Z)' : 'Comprimento (Z)';
+          if (lControls) {
+            if (isL) {
+              lControls.classList.remove('hidden');
+              lControls.classList.add('flex');
+              document.getElementById('val-itemArmW').textContent = Math.round((sel.armW || 0.50) * 100) + 'cm';
+              document.getElementById('inp-itemArmW').value = sel.armW || 0.50;
+            } else {
+              lControls.classList.add('hidden');
+              lControls.classList.remove('flex');
+            }
+          }
+          if (btnFlipL) {
+            btnFlipL.style.display = isL ? 'inline-flex' : 'none';
+          }
+          document.getElementById('inp-item-name').value = sel.name;
+          document.getElementById('val-itemW').textContent = Math.round(sel.w * 100) + 'cm';
+          document.getElementById('inp-itemW').value = sel.w;
+          document.getElementById('val-itemD').textContent = Math.round(sel.d * 100) + 'cm';
+          document.getElementById('inp-itemD').value = sel.d;
+          document.getElementById('val-itemH').textContent = Math.round((sel.h || 0.75) * 100) + 'cm';
+          document.getElementById('inp-itemH').value = sel.h || 0.75;
+          document.getElementById('val-itemElev').textContent = Math.round((sel.elev || 0) * 100) + 'cm';
+          document.getElementById('inp-itemElev').value = sel.elev || 0;
+          document.getElementById('val-itemX').textContent = sel.x.toFixed(2) + 'm';
+          document.getElementById('inp-itemX').value = sel.x;
+          document.getElementById('val-itemZ').textContent = sel.z.toFixed(2) + 'm';
+          document.getElementById('inp-itemZ').value = sel.z;
+        }
+
+        const listEl = document.getElementById('fixture-list');
+        listEl.innerHTML = '';
+        state.items.forEach((item) => {
+          const btn = document.createElement('button');
+          const active = item.id === selectedId;
+          btn.className =
+            'text-left px-2.5 py-1.5 rounded-lg border text-xs flex items-center justify-between transition ' +
+            (active
+              ? 'border-amber-500 bg-amber-500/15 text-[var(--foreground)] font-semibold'
+              : 'border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] hover:border-amber-500/40');
+          btn.innerHTML = `<span class="truncate pr-2">${item.name}</span><span class="font-mono text-[var(--muted-foreground)] shrink-0">${Math.round(item.w * 100)}×${Math.round(item.d * 100)}cm</span>`;
+          btn.addEventListener('click', () => {
+            selectedId = item.id;
+            syncUI();
+          });
+          listEl.appendChild(btn);
+        });
+      }
+
+      // Wire Selected Item Customizer
+      document.getElementById('inp-item-name').addEventListener('input', (e) => {
+        const sel = state.items.find((i) => i.id === selectedId);
+        if (sel) {
+          sel.name = e.target.value;
+          syncUI();
+        }
+      });
+
+      document.querySelectorAll('.color-swatch').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const sel = state.items.find((i) => i.id === selectedId);
+          if (sel) {
+            sel.color = btn.getAttribute('data-color');
+          }
+        });
+      });
+
+      document.getElementById('inp-itemW').addEventListener('input', (e) => {
+        const sel = state.items.find((i) => i.id === selectedId);
+        if (sel) { sel.w = parseFloat(e.target.value); syncUI(); }
+      });
+      document.getElementById('inp-itemD').addEventListener('input', (e) => {
+        const sel = state.items.find((i) => i.id === selectedId);
+        if (sel) { sel.d = parseFloat(e.target.value); syncUI(); }
+      });
+      document.getElementById('inp-itemArmW').addEventListener('input', (e) => {
+        const sel = state.items.find((i) => i.id === selectedId);
+        if (sel) { sel.armW = parseFloat(e.target.value); syncUI(); }
+      });
+      document.getElementById('btn-flip-l').addEventListener('click', () => {
+        const sel = state.items.find((i) => i.id === selectedId);
+        if (sel && sel.type === 'l_counter') { sel.flipL = !sel.flipL; syncUI(); }
+      });
+      document.getElementById('inp-itemH').addEventListener('input', (e) => {
+        const sel = state.items.find((i) => i.id === selectedId);
+        if (sel) { sel.h = parseFloat(e.target.value); syncUI(); }
+      });
+      document.getElementById('inp-itemElev').addEventListener('input', (e) => {
+        const sel = state.items.find((i) => i.id === selectedId);
+        if (sel) { sel.elev = parseFloat(e.target.value); syncUI(); }
+      });
+      document.getElementById('inp-itemX').addEventListener('input', (e) => {
+        const sel = state.items.find((i) => i.id === selectedId);
+        if (sel) { sel.x = parseFloat(e.target.value); syncUI(); }
+      });
+      document.getElementById('inp-itemZ').addEventListener('input', (e) => {
+        const sel = state.items.find((i) => i.id === selectedId);
+        if (sel) { sel.z = parseFloat(e.target.value); syncUI(); }
+      });
+
+      document.getElementById('btn-rot-45').addEventListener('click', () => {
+        const sel = state.items.find((i) => i.id === selectedId);
+        if (sel) { sel.rot = ((sel.rot || 0) + 45) % 360; syncUI(); }
+      });
+      document.getElementById('btn-rot-90').addEventListener('click', () => {
+        const sel = state.items.find((i) => i.id === selectedId);
+        if (sel) { sel.rot = ((sel.rot || 0) + 90) % 360; syncUI(); }
+      });
+      document.getElementById('btn-dup-item').addEventListener('click', () => {
+        const sel = state.items.find((i) => i.id === selectedId);
+        if (sel && sel.type !== 'rollup_door' && sel.type !== 'restroom_door') {
+          const copy = JSON.parse(JSON.stringify(sel));
+          copy.id = sel.type + '-' + Date.now();
+          copy.name = sel.name + ' (Cópia)';
+          copy.z = Math.min(state.structure.totalL - 0.3, sel.z + 0.65);
+          state.items.push(copy);
+          selectedId = copy.id;
+          syncUI();
+        }
+      });
+      document.getElementById('btn-del-item').addEventListener('click', () => {
+        const sel = state.items.find((i) => i.id === selectedId);
+        if (!sel || sel.type === 'rollup_door' || sel.type === 'restroom_door') return;
+        state.items = state.items.filter((i) => i.id !== selectedId);
+        selectedId = state.items[state.items.length - 1].id;
+        syncUI();
+      });
+
+      // Wire Wall & Structure Sliders
+      document.getElementById('inp-totalW').addEventListener('input', (e) => { state.structure.totalW = parseFloat(e.target.value); syncUI(); });
+      document.getElementById('inp-backW').addEventListener('input', (e) => { state.structure.backW = parseFloat(e.target.value); syncUI(); });
+      document.getElementById('inp-totalL').addEventListener('input', (e) => { state.structure.totalL = parseFloat(e.target.value); syncUI(); });
+      document.getElementById('inp-frontL').addEventListener('input', (e) => { state.structure.frontL = parseFloat(e.target.value); syncUI(); });
+      document.getElementById('inp-kTopW').addEventListener('input', (e) => { state.structure.kitchenTopW = parseFloat(e.target.value); syncUI(); });
+      document.getElementById('inp-kBotW').addEventListener('input', (e) => { state.structure.kitchenBotW = parseFloat(e.target.value); syncUI(); });
+      document.getElementById('inp-doorW').addEventListener('input', (e) => { state.structure.doorW = parseFloat(e.target.value); syncUI(); });
+      document.getElementById('inp-wallH').addEventListener('input', (e) => { state.structure.wallH = parseFloat(e.target.value); syncUI(); });
+
+      // Top Action Buttons
+      document.getElementById('btn-toggle-kitchen-wall').addEventListener('click', (e) => {
+        state.structure.showKitchenWall = !state.structure.showKitchenWall;
+        e.target.textContent = state.structure.showKitchenWall ? 'Parede da Cozinha: LIGADA' : 'Parede da Cozinha: DESLIGADA (Espaço Aberto)';
+        syncUI();
+      });
+
+      document.getElementById('btn-load-preset').addEventListener('click', () => {
+        state.items = JSON.parse(JSON.stringify([...STRUCTURAL_DOORS, ...PRESET_FURNITURE]));
+        selectedId = 'table-1';
+        syncUI();
+      });
+
+      document.getElementById('btn-clear-all').addEventListener('click', () => {
+        state.items = JSON.parse(JSON.stringify(STRUCTURAL_DOORS));
+        selectedId = 'restroom-door-1';
+        document.getElementById('clearance-badge').textContent = 'Espaço Limpo Pronto — Clique em "+ Item" acima para adicionar móveis';
+        syncUI();
+      });
+
+      document.getElementById('btn-reset-walls').addEventListener('click', () => {
+        state.structure = JSON.parse(JSON.stringify(DEFAULT_STRUCTURE));
+        document.getElementById('btn-toggle-kitchen-wall').textContent = 'Parede da Cozinha: LIGADA';
+        syncUI();
+      });
+
+      // View & Overlay Toggles
+      const viewPresets = {
+        iso: { yaw: -0.66, pitch: 0.82, zoom: 76, panX: 0, panY: 16 },
+        top: { yaw: 0.0, pitch: 1.48, zoom: 78, panX: 0, panY: 0 },
+        front: { yaw: -0.35, pitch: 0.55, zoom: 96, panX: 10, panY: -90 },
+        kitchen: { yaw: -0.95, pitch: 0.72, zoom: 94, panX: 35, panY: 65 },
+      };
+
+      document.querySelectorAll('[data-view]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const v = viewPresets[btn.getAttribute('data-view')];
+          if (v) {
+            cam.targetYaw = v.yaw;
+            cam.targetPitch = v.pitch;
+            cam.targetZoom = v.zoom;
+            cam.targetPanX = v.panX;
+            cam.targetPanY = v.panY;
+          }
+          document.querySelectorAll('.view-btn').forEach((b) => {
+            b.className =
+              b === btn
+                ? 'view-btn btn-hi btn-hi-amber !min-h-[34px] !px-3 !py-1.5'
+                : 'view-btn btn-hi btn-hi-slate !min-h-[34px] !px-3 !py-1.5';
+          });
+        });
+      });
+
+      document.getElementById('btn-toggle-grid').addEventListener('click', (e) => {
+        showFloorGrid = !showFloorGrid;
+        e.target.textContent = showFloorGrid ? 'Grade 50cm: LIG' : 'Grade 50cm: DESL';
+      });
+      document.getElementById('btn-toggle-rulers').addEventListener('click', (e) => {
+        showClearanceRulers = !showClearanceRulers;
+        e.target.textContent = showClearanceRulers ? 'Cotas de Espaço: LIG' : 'Cotas de Espaço: DESL';
+      });
+      document.getElementById('btn-toggle-handles').addEventListener('click', (e) => {
+        showHandles = !showHandles;
+        e.target.textContent = showHandles ? 'Alças das Paredes: LIG' : 'Alças das Paredes: DESL';
+      });
+      document.getElementById('btn-zoom-in').addEventListener('click', () => { cam.targetZoom = Math.min(165, cam.targetZoom + 14); });
+      document.getElementById('btn-zoom-out').addEventListener('click', () => { cam.targetZoom = Math.max(36, cam.targetZoom - 14); });
+
+      syncUI();
+      requestAnimationFrame(render);
+    })();
+  </script>
+</body>
+</html>
